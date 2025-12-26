@@ -1,0 +1,75 @@
+name: Terraform CI CD (Static Website)
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  terraform-plan:
+    name: Terraform Plan (CI)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: terraform init
+        working-directory: terraform
+
+      - name: Terraform Validate
+        run: terraform validate
+        working-directory: terraform
+
+      - name: Terraform Plan
+        run: terraform plan
+        working-directory: terraform
+
+  terraform-apply:
+    name: Terraform Apply (CD)
+    needs: terraform-plan
+    runs-on: ubuntu-latest
+    environment:
+      name: production 
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: terraform init
+        working-directory: terraform
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+        working-directory: terraform
+      
+      - name: Read Terraform Output
+        run: |
+          echo "BUCKET_NAME=$(terraform output -raw website_bucket_name)" >> $GITHUB_ENV
+        working-directory: terraform
+
+      - name: Deploy Website
+        run: |
+          aws s3 sync Portfolio/ s3://$BUCKET_NAME --delete
