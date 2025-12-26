@@ -33,8 +33,18 @@ jobs:
         working-directory: terraform
 
       - name: Terraform Plan
-        run: terraform plan
+        run: terraform plan -out=tfplan
         working-directory: terraform
+      
+      - name: Terraform Plan (Readable)
+        run: terraform show -no-color tfplan
+        working-directory: terraform
+
+      - name: Upload plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: terraform/tfplan
 
   terraform-apply:
     name: Terraform Apply (CD)
@@ -61,8 +71,14 @@ jobs:
         run: terraform init
         working-directory: terraform
 
-      - name: Terraform Apply
-        run: terraform apply -auto-approve
+      - name: Download plan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan
+          path: terraform
+
+      - name: Terraform Apply Approved Plan
+        run: terraform apply -auto-approve tfplan
         working-directory: terraform
       
       - name: Read Terraform Output
