@@ -3,7 +3,7 @@ variable "bucket_name" {
   default = "my-static-site-using-terraform"
 }
 
-variable "environment" {
-  type = string
-  default = "dev"
-}
+# variable "environment" {
+#   type = string
+#   default = "dev"
+# }
